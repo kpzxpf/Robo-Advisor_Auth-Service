@@ -1,0 +1,18 @@
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/robo_advisor
+    username: robo
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  security:
+    jwt:
+      secret-code: qf8Z!vB3s7#Lp9D2rX@uF6nY^mT1wE4cGh0zJ&kK5p
+      expiration: 86400000
