@@ -3,7 +3,6 @@ CREATE TABLE roles (
                        role_name VARCHAR(50) UNIQUE NOT NULL
 );
 
-
 CREATE TABLE users (
                        id SERIAL PRIMARY KEY,
                        username VARCHAR(50) UNIQUE NOT NULL,
@@ -15,6 +14,12 @@ CREATE TABLE users (
                        address TEXT,
                        phone_number VARCHAR(20),
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                       role_id INTEGER REFERENCES roles(id)
+                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_roles
+(
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles (id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
 );
