@@ -7,38 +7,84 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
-import java.util.Date;
+import java.util.*;
 
 @Component
 public class JwtUtil {
-    @Value("${spring.security.jwt.private-key-location}")
+    @Value("${spring.spring.security.jwt.private-key-location}")
     private Resource privateKeyResource;
-    @Value("${spring.security.jwt.public-key-location}")
+    @Value("${spring.spring.security.jwt.public-key-location}")
     private Resource publicKeyResource;
-    @Value("${spring.security.jwt.expiration}")
+    @Value("${spring.spring.security.jwt.expiration}")
     private long expiration;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
+    private String keyId;
 
     @PostConstruct
     public void init() throws Exception {
-        byte[] keyBytes = privateKeyResource.getInputStream().readAllBytes();
-        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(
-                Base64.getDecoder().decode(keyBytes));
-        this.privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpec);
+        this.privateKey = loadPrivateKey(privateKeyResource);
+        this.publicKey = loadPublicKey(publicKeyResource);
+        this.keyId = UUID.randomUUID().toString();
+    }
 
-        byte[] pubBytes = publicKeyResource.getInputStream().readAllBytes();
-        X509EncodedKeySpec pubSpec = new X509EncodedKeySpec(
-                Base64.getDecoder().decode(pubBytes));
-        this.publicKey = KeyFactory.getInstance("RSA").generatePublic(pubSpec);
+    private PrivateKey loadPrivateKey(Resource resource) throws Exception {
+        String pem = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        byte[] decoded = decodePem(pem);
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoded);
+        return KeyFactory.getInstance("RSA").generatePrivate(spec);
+    }
+
+    private PublicKey loadPublicKey(Resource resource) throws Exception {
+        String pem = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        byte[] decoded = decodePem(pem);
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
+        return KeyFactory.getInstance("RSA").generatePublic(spec);
+    }
+
+    public Map<String, Object> getJwkSet() {
+        Map<String, Object> jwkSet = new HashMap<>();
+
+        // Add the RSA public key in JWK format
+        Map<String, Object> jwk = new HashMap<>();
+        RSAPublicKey rsaPublicKey = (RSAPublicKey) publicKey;
+
+        jwk.put("kty", "RSA");
+        jwk.put("kid", keyId);
+        jwk.put("use", "sig");
+        jwk.put("alg", "RS256");
+
+        // Modulus - n
+        byte[] modulus = rsaPublicKey.getModulus().toByteArray();
+        if (modulus[0] == 0) {
+            byte[] tmp = new byte[modulus.length - 1];
+            System.arraycopy(modulus, 1, tmp, 0, tmp.length);
+            modulus = tmp;
+        }
+        jwk.put("n", Base64.getUrlEncoder().withoutPadding().encodeToString(modulus));
+
+        byte[] exponent = rsaPublicKey.getPublicExponent().toByteArray();
+        jwk.put("e", Base64.getUrlEncoder().withoutPadding().encodeToString(exponent));
+
+        jwkSet.put("keys", List.of(jwk));
+
+        return jwkSet;
+    }
+
+    private byte[] decodePem(String pem) {
+        String base64 = pem
+                .replaceAll("-----BEGIN [^-]+-----", "")
+                .replaceAll("-----END [^-]+-----", "")
+                .replaceAll("\\s+", "");
+        return Base64.getMimeDecoder().decode(base64);
     }
 
     public String generateToken(String username) {
