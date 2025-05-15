@@ -2,7 +2,7 @@ package com.vlz.authservice.controller;
 
 import com.vlz.authservice.dto.LoginDto;
 import com.vlz.authservice.dto.RegisterDto;
-import com.vlz.authservice.dto.UserDto;
+import com.vlz.authservice.dto.event.UserSavedEvent;
 import com.vlz.authservice.mapper.UserMapper;
 import com.vlz.authservice.service.AuthService;
 import jakarta.validation.Valid;
@@ -26,7 +26,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public UserDto register(@RequestBody @Valid RegisterDto registerDto) {
-        return userMapper.toDto(authService.register(registerDto));
+    public UserSavedEvent register(@RequestBody @Valid RegisterDto registerDto) {
+        return authService.register(registerDto);
     }
 }

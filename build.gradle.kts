@@ -35,4 +35,5 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
     testImplementation("org.mockito:mockito-core:5.17.0")
+    implementation("org.springframework.kafka:spring-kafka")
 }

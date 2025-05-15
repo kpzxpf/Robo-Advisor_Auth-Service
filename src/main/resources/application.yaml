@@ -2,18 +2,18 @@ server:
   port: 8082
 
 spring:
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/robo_advisor
-    username: robo
-    password: password
-  jpa:
-    hibernate:
-      ddl-auto: none
+  kafka:
+    bootstrap-servers: localhost:9092
+    reply:
+      timeout: 15
+    topic:
+      replicationFactor: 1
+      partitions: 1
+      names:
+        user-add-request-topic: user-add-request
+        user-add-reply-topic: user-add-reply
+    consumer:
+      group-id: user-group
 
   spring:
     security:

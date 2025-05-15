@@ -53,7 +53,6 @@ public class JwtUtil {
     public Map<String, Object> getJwkSet() {
         Map<String, Object> jwkSet = new HashMap<>();
 
-        // Add the RSA public key in JWK format
         Map<String, Object> jwk = new HashMap<>();
         RSAPublicKey rsaPublicKey = (RSAPublicKey) publicKey;
 
@@ -62,7 +61,6 @@ public class JwtUtil {
         jwk.put("use", "sig");
         jwk.put("alg", "RS256");
 
-        // Modulus - n
         byte[] modulus = rsaPublicKey.getModulus().toByteArray();
         if (modulus[0] == 0) {
             byte[] tmp = new byte[modulus.length - 1];
