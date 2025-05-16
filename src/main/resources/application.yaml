@@ -12,6 +12,9 @@ spring:
       names:
         user-add-request-topic: user-add-request
         user-add-reply-topic: user-add-reply
+
+        user-find-by-username-request-topic: user-find-by-username-request
+        user-find-by-username-reply-topic: user-find-by-username-reply
     consumer:
       group-id: user-group
 
