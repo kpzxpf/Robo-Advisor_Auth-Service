@@ -5,7 +5,7 @@ import com.vlz.authservice.dto.RegisterDto;
 import com.vlz.authservice.dto.event.UserAddEvent;
 import com.vlz.authservice.dto.event.UserSavedEvent;
 import com.vlz.authservice.exception.AuthenticationException;
-import com.vlz.authservice.kafkaGetaway.UserAddKafkaGateway;
+import com.vlz.authservice.kafkaRequest.UserAddKafkaRequest;
 import com.vlz.authservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,7 +20,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final UserAddKafkaGateway userAddKafkaGateway;
+    private final UserAddKafkaRequest userAddKafkaRequest;
 
     public String login(LoginDto loginDto) {
         Authentication authentication = authenticationManager.authenticate(
@@ -40,6 +40,6 @@ public class AuthService {
                 .email(registerDto.getEmail())
                 .build();
 
-        return userAddKafkaGateway.sendRegistrationRequest(user);
+        return userAddKafkaRequest.sendRegistrationRequest(user);
     }
 }

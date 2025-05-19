@@ -1,4 +1,4 @@
-package com.vlz.authservice.kafkaGetaway;
+package com.vlz.authservice.kafkaRequest;
 
 import com.vlz.authservice.dto.event.UserAddEvent;
 import com.vlz.authservice.dto.event.UserSavedEvent;
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Component
-public class UserAddKafkaGateway {
+public class UserAddKafkaRequest {
     private final ReplyingKafkaTemplate<String, Object, Object> userAddReplyingKafkaTemplate;
 
     @Value("${spring.kafka.topic.names.user-add-request-topic}")
@@ -27,7 +27,7 @@ public class UserAddKafkaGateway {
     private long replyTimeoutSeconds;
 
 
-    public UserAddKafkaGateway(@Qualifier("userAddReplyingKafkaTemplate")
+    public UserAddKafkaRequest(@Qualifier("userAddReplyingKafkaTemplate")
                                ReplyingKafkaTemplate<String, Object, Object> userAddReplyingKafkaTemplate) {
 
         this.userAddReplyingKafkaTemplate = userAddReplyingKafkaTemplate;
@@ -36,28 +36,23 @@ public class UserAddKafkaGateway {
     public UserSavedEvent sendRegistrationRequest(UserAddEvent userAddEvent) {
         try {
             ProducerRecord<String, Object> record = new ProducerRecord<>(userAddRequestTopicName, userAddEvent);
-
-            RequestReplyFuture<String, Object, Object> replyFuture =
-                    userAddReplyingKafkaTemplate.sendAndReceive(record);
-
-            ConsumerRecord<String, Object> replyRecord = replyFuture.get(
-                    replyTimeoutSeconds,
-                    TimeUnit.SECONDS
-            );
-
+            RequestReplyFuture<String, Object, Object> replyFuture = userAddReplyingKafkaTemplate.sendAndReceive(record);
+            ConsumerRecord<String, Object> replyRecord = replyFuture.get(replyTimeoutSeconds, TimeUnit.SECONDS);
             Object replyValue = replyRecord.value();
 
-            if (replyValue instanceof UserSavedEvent) {
-                log.info("Received UserSavedEvent reply: {}", replyValue);
-                return (UserSavedEvent) replyValue;
+            if (replyValue instanceof UserSavedEvent event) {
+                log.info("Received UserSavedEvent reply from topic {}: {}", userAddRequestTopicName, event);
+                if (!event.isSuccess()) {
+                    throw new RuntimeException("User registration failed: " + event.getMessage());
+                }
+                return event;
             } else {
-                log.error("An unexpected response type or error occurred while registering the user: {}", replyValue);
-                throw new RuntimeException("User registration error or unexpected response received from Kafka service.");
+                log.error("Unexpected reply type received from topic {}: {}", userAddRequestTopicName, replyValue);
+                throw new RuntimeException("Unexpected response type received from Kafka service.");
             }
-
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.error("Error during Kafka request-response when registering a user: {}", e.getMessage());
-            throw new RuntimeException("Failed to complete user registration via Kafka request-response.", e);
+            log.error("Error during Kafka request to topic {}: {}", userAddRequestTopicName, e.getMessage());
+            throw new RuntimeException("Failed to complete user registration via Kafka.", e);
         }
     }
 }

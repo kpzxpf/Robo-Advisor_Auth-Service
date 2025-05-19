@@ -32,21 +32,24 @@ public class UserKafkaConfig {
 
     @Value("${spring.kafka.topic.partitions}")
     private int partitions;
+
     @Value("${spring.kafka.topic.replicationFactor}")
     private short replicationFactor;
+
     @Value("${spring.kafka.reply.timeout}")
     private long replyTimeoutSeconds;
 
     @Value("${spring.kafka.topic.names.user-add-request-topic}")
     private String userAddRequestTopicName;
+
     @Value("${spring.kafka.topic.names.user-add-reply-topic}")
     private String userAddReplyTopicName;
 
     @Value("${spring.kafka.topic.names.user-find-by-username-request-topic}")
     private String userFindByUsernameRequestTopicName;
+
     @Value("${spring.kafka.topic.names.user-find-by-username-reply-topic}")
     private String userFindByUsernameReplyTopicName;
-
 
     @Bean
     public NewTopic userAddRequestTopic() {
@@ -59,12 +62,12 @@ public class UserKafkaConfig {
     }
 
     @Bean
-    public NewTopic userFindByIdRequestTopic() {
+    public NewTopic userFindByUsernameRequestTopic() {
         return new NewTopic(userFindByUsernameRequestTopicName, partitions, replicationFactor);
     }
 
     @Bean
-    public NewTopic userFindByIDReplyTopic() {
+    public NewTopic userFindByUsernameReplyTopic() {
         return new NewTopic(userFindByUsernameReplyTopicName, partitions, replicationFactor);
     }
 
@@ -75,17 +78,10 @@ public class UserKafkaConfig {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "user-reply-group");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "user-group");
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
-    /**
-     * Configures the ConcurrentKafkaListenerContainerFactory for reply consumers.
-     * Sets up manual acknowledgment mode.
-     *
-     * @param userReplyConsumerFactory The consumer factory for replies.
-     * @return The configured container factory.
-     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> userReplyKafkaListenerContainerFactory(
             ConsumerFactory<String, Object> userReplyConsumerFactory) {
@@ -96,13 +92,6 @@ public class UserKafkaConfig {
         return factory;
     }
 
-    /**
-     * Creates a message listener container specifically for the user add reply topic.
-     * This container is used by the ReplyingKafkaTemplate for user add.
-     *
-     * @param userReplyKafkaListenerContainerFactory The container factory.
-     * @return The configured message listener container.
-     */
     @Bean
     public ConcurrentMessageListenerContainer<String, Object> userAddReplyMessageContainer(
             ConcurrentKafkaListenerContainerFactory<String, Object> userReplyKafkaListenerContainerFactory) {
@@ -112,18 +101,11 @@ public class UserKafkaConfig {
         return container;
     }
 
-    /**
-     * Creates a message listener container specifically for the user find by ID reply topic.
-     * This container is used by the ReplyingKafkaTemplate for user find by ID.
-     *
-     * @param userReplyKafkaListenerContainerFactory The container factory.
-     * @return The configured message listener container.
-     */
     @Bean
-    public ConcurrentMessageListenerContainer<String, Object> userFindByIdReplyMessageContainer(
+    public ConcurrentMessageListenerContainer<String, Object> userFindByUsernameReplyMessageContainer(
             ConcurrentKafkaListenerContainerFactory<String, Object> userReplyKafkaListenerContainerFactory) {
         ConcurrentMessageListenerContainer<String, Object> container =
-                userReplyKafkaListenerContainerFactory.createContainer(userFindByUsernameRequestTopicName);
+                userReplyKafkaListenerContainerFactory.createContainer(userFindByUsernameReplyTopicName);
         container.getContainerProperties().setMissingTopicsFatal(false);
         return container;
     }
@@ -137,14 +119,6 @@ public class UserKafkaConfig {
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
-    /**
-     * Configures the ReplyingKafkaTemplate for user add operations.
-     * This template is used by the UserAddKafkaGateway.
-     *
-     * @param userRequestProducerFactory   The producer factory for requests.
-     * @param userAddReplyMessageContainer The message listener container for user add replies.
-     * @return The configured ReplyingKafkaTemplate.
-     */
     @Bean
     @Qualifier("userAddReplyingKafkaTemplate")
     public ReplyingKafkaTemplate<String, Object, Object> userAddReplyingKafkaTemplate(
@@ -156,21 +130,13 @@ public class UserKafkaConfig {
         return template;
     }
 
-    /**
-     * Configures the ReplyingKafkaTemplate for user find by ID operations.
-     * This template is used by the UserFindByIdKafkaGateway.
-     *
-     * @param userRequestProducerFactory        The producer factory for requests.
-     * @param userFindByIdReplyMessageContainer The message listener container for user find by ID replies.
-     * @return The configured ReplyingKafkaTemplate.
-     */
     @Bean
-    @Qualifier("userFindByIdReplyingKafkaTemplate")
-    public ReplyingKafkaTemplate<String, Object, Object> userFindByIdReplyingKafkaTemplate(
+    @Qualifier("userFindByUsernameReplyingKafkaTemplate")
+    public ReplyingKafkaTemplate<String, Object, Object> userFindByUsernameReplyingKafkaTemplate(
             ProducerFactory<String, Object> userRequestProducerFactory,
-            ConcurrentMessageListenerContainer<String, Object> userFindByIdReplyMessageContainer) {
+            ConcurrentMessageListenerContainer<String, Object> userFindByUsernameReplyMessageContainer) {
         ReplyingKafkaTemplate<String, Object, Object> template =
-                new ReplyingKafkaTemplate<>(userRequestProducerFactory, userFindByIdReplyMessageContainer);
+                new ReplyingKafkaTemplate<>(userRequestProducerFactory, userFindByUsernameReplyMessageContainer);
         template.setDefaultReplyTimeout(Duration.ofSeconds(replyTimeoutSeconds));
         return template;
     }
